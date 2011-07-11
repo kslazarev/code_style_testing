@@ -10,16 +10,16 @@
 
 * Используйте обращение к базе данных только в необходимых случаях и при тестировании моделей. Используйте 'factory_girl' для тестирования моделей.
 
-  let(:user){Factory.create(:user)}
-  let(:user){Factory.build(:user)}
+    let(:user){Factory.create(:user)}
+    let(:user){Factory.build(:user)}
 
 * Не используйте обращение к базе данных при тестировании 'helpers', 'controllers', 'views', 'routes'. Используйте 'mocks' и 'stubs'.
 
-  user = double(:user, :to_s => 'User')
-  user.stubs(:name).returns('John')
+    user = double(:user, :to_s => 'User')
+    user.stubs(:name).returns('John')
 
-  User.stub(:find).with(user_id).and_return user
-  Article.stub_chain(:recent, :published).and_return articles
+    User.stub(:find).with(user_id).and_return user
+    Article.stub_chain(:recent, :published).and_return articles
 
 * Там, где возможно в 'describe' используйте вместо названия тестируемого класса сам класс. Не допускается использование коллекции в 'describe'. Используйте для этого 'subject'.  
 
