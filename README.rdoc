@@ -1,0 +1,170 @@
+= Code style for Testing (Draft)
+
+== Общие правила:
+
+* Создавайте только необходимое количество объектов для тестирования. 
+
+* Пытайтесь добиться использования только одного 'expectation' в одном тесте.
+
+* Описание теста должно быть не более 40 символов.
+
+* Используйте обращение к базе данных только в необходимых случаях и при тестировании моделей. Используйте 'factory_girl' для тестирования моделей.
+
+  let(:user){Factory.create(:user)}
+  let(:user){Factory.build(:user)}
+
+* Не используйте обращение к базе данных при тестировании 'helpers', 'controllers', 'views', 'routes'. Используйте 'mocks' и 'stubs'.
+
+  user = double(:user, :to_s => 'User')
+  user.stubs(:name).returns('John')
+
+  User.stub(:find).with(user_id).and_return user
+  Article.stub_chain(:recent, :published).and_return articles
+
+* Там, где возможно в 'describe' используйте вместо названия тестируемого класса сам класс. Не допускается использование коллекции в 'describe'. Используйте для этого 'subject'.  
+
+    describe 42 do
+      it{should be_even}
+      it{should_not be_zero}
+    end
+
+    describe Array do
+      it{should be_empty}
+      it{should have(0).items} 
+    end
+
+    describe 'An array containing 1, 2, 3' do
+      subject{[1, 2, 3]}
+    end
+
+* Обязательно помещайте тестируемый метод в 'subject'. Для обращения к методу используйте конструкцию 'it{should}'.
+
+    subject{42.to_s}
+
+    it{should == '42'} 
+
+* Для тестирования методов, которые не меняют аттрибутов и состоянии объектов используйте конструкцию 'its{}'.
+  
+    subject{[1, 2, 3]}
+ 
+    its(:size){should == 4}
+ 
+* Используйте 'let' для определения общих переменных в тестах вместо 'before' и 'instance variables'. 
+
+    let(:user){double :user, :name => 'John'}
+
+* Используйте 'context' для тестирования ветвлений и изменения параметров. В названии 'context' используйте 'when'/'with'.
+
+    context 'when array is empty' do
+    end
+
+* На каждый 'before :all' должен существовать свои 'after :all'.
+
+== Правила наименования тестов:
+
+* Для методов класса '.class_method'.
+
+    describe MyClass do
+      describe '.class_method' do
+      end
+    end
+
+* Для методов объекта класса '#instance_method'.
+
+    describe MyClass do
+      describe '#instance_method' do
+      end
+    end
+
+== Форматирование:
+
+* Используйте '==' вместо 'eq'.
+* Используйте 'be' вместо '==' для проверки на 'true', 'false, 'nil', 'present'.
+
+    obj.should be_true
+    obj.should be_false
+    obj.should be_nil
+    obj.should be
+
+* Используйте 'be' для численных сравнении.
+
+    37.should be < 100
+    37.should be <= 38
+    37.should be >= 2
+    37.should be > 7 
+
+* Используйте предикаторы.
+
+    [].should be_empty                     # [].empty?.should be_true 
+    42.should be_even                      # 42.even?.should be_true  
+    123.should_not be_multiple_of(5)       # 123.multiple_of?(5).should be_false
+
+    {:a => 1, :b => 2}.should have_key(:a) # {a: => 1, :b => 2}.has_key?(:a).should be_true 
+
+* Не используйте 'satisfy'.
+* Для нестандартных условии используйте 'custom matchers'.
+
+    RSpec::Matchers.define :be_a_multiple_of do |expected|
+      match do |actual|
+        actual % expected == 0
+      end 
+    end
+  
+    describe 10 do
+      it{should be_a_multiple_of(5)}
+    end  
+
+* Рекомендуется использовать 'shared_examples_for' для отDRYивания кода.
+
+    shared_examples_for "a single-element array" do
+      it{should_not be_empty}
+      it{should have(1).element}
+    end
+   
+    describe ["foo"] do
+      it_behaves_like "a single-element array"
+    end
+   
+    describe [42] do
+      it_behaves_like "a single-element array"
+    end
+
+    shared_examples_for "a collection object" do
+      describe "<<" do
+        it "adds objects to the end of the collection" do
+          collection << 1
+          collection << 2
+          collection.to_a.should eq([1,2])
+        end
+      end
+    end
+ 
+    describe Array do
+      it_behaves_like "a collection object" do
+        let(:collection){Array.new}
+      end
+    end
+ 
+    describe Set do
+      it_behaves_like "a collection object" do
+        let(:collection){Set.new}
+      end
+    end
+
+== Частные случаи при тестировании:
+
+* Обязательно проверяйте на количество элементов в любых возвращаемых коллекциях.
+
+    [1, 2, 3].should have(3).items
+    [1, 2, 3].should have_at_least(2).items
+    [1, 2, 3].should have_at_most(4).items
+
+* Используйте '=~' для сравнения строк, если создания аналогичной строки в тесте является тяжёлой задачей.
+
+    'This is a string'.should =~ /^This/
+
+* Рекомендуется иcпользовать конструкцию 'expect{}.to change{}' для тестировании изменении атрибутов или состоянии объектов после выполнения метода.
+
+    expect{array << 42}.to change{array.size}.from(0).to(1)
+    expect{array << 42}.to change{array.size}.by(1)
+
